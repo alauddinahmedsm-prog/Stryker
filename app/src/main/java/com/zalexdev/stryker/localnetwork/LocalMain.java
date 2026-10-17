@@ -1,15 +1,20 @@
 package com.zalexdev.stryker.localnetwork;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.ConnectivityManager;
 import android.net.DhcpInfo;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,6 +24,10 @@ import android.webkit.WebView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -38,8 +47,10 @@ import com.zalexdev.stryker.localnetwork.utils.AdvancedLocalScanner;
 import com.zalexdev.stryker.utils.Core;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 
 public class LocalMain extends Fragment {
 
@@ -65,6 +76,7 @@ public class LocalMain extends Fragment {
     public MaterialTextView networkGateway;
     public MaterialTextView networkSubnet;
     public MaterialTextView networkCount;
+    private MaterialButton warningButton;
     public MaterialButton rescanBtn;
 
     private RecyclerView mRecyclerView;
@@ -78,12 +90,45 @@ public class LocalMain extends Fragment {
     private final AtomicBoolean alive = new AtomicBoolean(true);
 
     private AdvancedLocalScanner scanner;
+    private ActivityResultLauncher<String[]> multiplePermissionsLauncher;
+    private BiConsumer<Boolean, Boolean> multipleCallback;
+    private String[] currentPermissionsGroup;
+    private final String[] REQUIRED_PERMISSIONS = new String[]{
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? Manifest.permission.NEARBY_WIFI_DEVICES : null
+    };
 
     public LocalMain() {
     }
 
     private boolean uiSafe() {
         return alive.get() && activity != null && isAdded();
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        multiplePermissionsLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestMultiplePermissions(),
+                result -> {
+                    if (multipleCallback == null || currentPermissionsGroup == null) return;
+
+                    boolean allGranted = true;
+                    boolean anyNeverAskAgain = false;
+
+                    for (String permission : currentPermissionsGroup) {
+                        Boolean isGranted = result.get(permission);
+                        if (isGranted == null || !isGranted) {
+                            allGranted = false;
+                            if (!ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(), permission)) {
+                                anyNeverAskAgain = true;
+                            }
+                        }
+                    }
+                    multipleCallback.accept(allGranted, anyNeverAskAgain);
+                }
+        );
     }
 
     @Override
@@ -106,6 +151,7 @@ public class LocalMain extends Fragment {
                 getResources().getColor(R.color.stryker_accent),
                 0xFFAB47BC);
         refresh.setOnRefreshListener(this::triggerScan);
+        warningButton.setOnClickListener(v -> showMissingPermissionsDialog(true));
         rescanBtn.setOnClickListener(v -> triggerScan());
 
         View statusRow = view.findViewById(R.id.local_status_row);
@@ -152,6 +198,24 @@ public class LocalMain extends Fragment {
         }
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        List<String> missingPermissions = new ArrayList<>();
+
+        for (String perm : getActualRequiredPermissions()) {
+            if (ActivityCompat.checkSelfPermission(requireContext(), perm) != PackageManager.PERMISSION_GRANTED) {
+                missingPermissions.add(perm);
+            }
+        }
+
+        if (missingPermissions.isEmpty()) {
+            warningButton.setVisibility(View.GONE);
+        } else {
+            warningButton.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void reloadDevicesFromPersistentSource() {
         ArrayList<Device> restored = null;
         if (mainActivity != null && mainActivity.getDevices() != null
@@ -189,6 +253,7 @@ public class LocalMain extends Fragment {
         networkGateway = view.findViewById(R.id.network_gateway);
         networkSubnet = view.findViewById(R.id.network_subnet);
         networkCount = view.findViewById(R.id.network_count);
+        warningButton = view.findViewById(R.id.warning_button);
         rescanBtn = view.findViewById(R.id.network_rescan);
     }
 
@@ -216,10 +281,90 @@ public class LocalMain extends Fragment {
         startScan();
     }
 
-    public void startScan() {
-        if (core != null && !core.hasLocationPermission()) {
-            core.requestLocationPermission(activity);
+    private void openAppSettings() {
+        Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(
+                Uri.fromParts(
+                        "package", requireContext().getPackageName(), null));
+        startActivity(intent);
+    }
+
+    @NonNull
+    private List<String> getActualRequiredPermissions() {
+        List<String> actual = new ArrayList<>();
+        for (String perm : REQUIRED_PERMISSIONS) {
+            if (perm != null) actual.add(perm);
         }
+        return actual;
+    }
+
+    private void showMissingPermissionsDialog(boolean asWarning) {
+        List<String> missingPermissions = new ArrayList<>();
+
+        for (String perm : getActualRequiredPermissions()) {
+            if (ActivityCompat.checkSelfPermission(requireContext(), perm) != PackageManager.PERMISSION_GRANTED) {
+                String shortName = perm.substring(perm.lastIndexOf(".") + 1);
+                missingPermissions.add("«" + shortName + "»");
+            }
+        }
+
+        if (missingPermissions.isEmpty()) return;
+
+        String missingText = String.join(", ", missingPermissions);
+
+        String message = String.format(getString(R.string.local_scan_permissions_desc), missingText);
+
+        MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.warning))
+                .setMessage(message);
+        dialog.setCancelable(false);
+        if (asWarning) {
+            dialog.setPositiveButton(getString(R.string.ok), null);
+        } else {
+            dialog.setPositiveButton(android.R.string.ok, (d, w) -> _startScan());
+        }
+        dialog.setNeutralButton(getString(R.string.settings), (d, w) -> openAppSettings());
+        if (!asWarning)
+            dialog.setNegativeButton(getString(R.string.cancel), null);
+        dialog.show();
+    }
+
+    private void checkMultiplePermissions(@NonNull String[] permissions, BiConsumer<Boolean, Boolean> callback) {
+        boolean allGranted = true;
+        for (String permission : permissions) {
+            if (ActivityCompat.checkSelfPermission(requireContext(), permission) != PackageManager.PERMISSION_GRANTED) {
+                allGranted = false;
+                break;
+            }
+        }
+
+        if (allGranted) {
+            callback.accept(true, false);
+            return;
+        }
+
+        this.currentPermissionsGroup = permissions;
+        this.multipleCallback = callback;
+        multiplePermissionsLauncher.launch(permissions);
+    }
+
+    public void startScan() {
+        String[] permissionsArray = getActualRequiredPermissions().toArray(new String[0]);
+
+        checkMultiplePermissions(permissionsArray, (isAllGranted, isNeverAskAgain) -> {
+            if (isAllGranted) {
+                warningButton.setVisibility(View.GONE);
+                _startScan();
+            } else if (isNeverAskAgain) {
+                warningButton.setVisibility(View.VISIBLE);
+                _startScan();
+            } else {
+                showMissingPermissionsDialog(false);
+            }
+        });
+    }
+
+    private void _startScan() {
         if (scanner != null) {
             try {
                 scanner.stopScan();

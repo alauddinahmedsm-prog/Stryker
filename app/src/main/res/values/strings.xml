@@ -148,6 +148,7 @@
     <string name="active_clients_not_found">Active clients not found.</string>
     <string name="error">Error</string>
     <string name="ok">OK</string>
+    <string name="warning">Warning</string>
 
     <string name="settings_title">Settings</string>
     <string name="settings_subtitle">Customize Stryker to fit your workflow</string>
@@ -452,6 +453,7 @@ manager</string>
     <string name="local_scan_target_invalid_ip">Enter a valid IPv4 address</string>
     <string name="local_scan_target_invalid_cidr">Enter a CIDR mask between 1 and 32</string>
     <string name="local_scan_target_custom_label">Custom</string>
+    <string name="local_scan_permissions_desc">It is recommended to grant the following permissions to the app:\n%s, so that scan results are more accurate.</string>
 
     <string name="wifi_title">Wi-Fi Networks</string>
     <string name="wifi_subtitle_scanning">Scanning the airwaves…</string>
