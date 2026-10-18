@@ -6,9 +6,7 @@ import static android.content.Context.WIFI_SERVICE;
 import static android.os.Build.VERSION.SDK_INT;
 import static android.os.Environment.getExternalStorageDirectory;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -20,13 +18,10 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.VibrationEffect;
@@ -35,12 +30,9 @@ import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.view.View;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 import androidx.security.crypto.EncryptedSharedPreferences;
@@ -48,9 +40,7 @@ import androidx.security.crypto.MasterKeys;
 import androidx.viewpager.widget.ViewPager;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.zalexdev.stryker.BuildConfig;
-import com.zalexdev.stryker.R;
 import com.zalexdev.stryker.custom.Credentials;
 import com.zalexdev.stryker.custom.Device;
 import com.zalexdev.stryker.custom.Exploit;
@@ -63,19 +53,16 @@ import com.zalexdev.stryker.engine.RootlessEngine;
 import com.zalexdev.stryker.logger.LogTool;
 import com.zalexdev.stryker.logger.Logger;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.security.GeneralSecurityException;
@@ -86,7 +73,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.UUID;
 import com.stryker.terminal.bridge.StrykerLog;
 
@@ -1439,34 +1425,6 @@ public class Core {
                     new String[]{WRITE_EXTERNAL_STORAGE},
                     123
             );
-        }
-    }
-
-    public boolean hasLocationPermission() {
-        try {
-            return context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    public void requestLocationPermission(Activity activity) {
-        if (activity == null) return;
-        try {
-            ArrayList<String> wanted = new ArrayList<>();
-            if (!hasLocationPermission()) {
-                wanted.add(android.Manifest.permission.ACCESS_FINE_LOCATION);
-                wanted.add(android.Manifest.permission.ACCESS_COARSE_LOCATION);
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                    && context.checkSelfPermission(android.Manifest.permission.NEARBY_WIFI_DEVICES)
-                    != PackageManager.PERMISSION_GRANTED) {
-                wanted.add(android.Manifest.permission.NEARBY_WIFI_DEVICES);
-            }
-            if (wanted.isEmpty()) return;
-            ActivityCompat.requestPermissions(activity, wanted.toArray(new String[0]), 124);
-        } catch (Exception ignored) {
         }
     }
 
