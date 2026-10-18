@@ -11,26 +11,17 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.drawable.Drawable;
 import android.app.Activity;
-import android.os.Build;
 import android.text.Layout;
-import android.text.Spannable;
-import android.text.SpannableString;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
-import android.text.style.ImageSpan;
 import android.text.style.LeadingMarginSpan;
 import android.util.DisplayMetrics;
-import android.view.Display;
 import android.view.View;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
+import android.view.Window;
 
 import androidx.annotation.NonNull;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.zalexdev.stryker.R;
@@ -46,14 +37,37 @@ public class Utils {
 
     public static void applySystemBarInsets(Activity activity) {
         if (activity == null) return;
+        Window window = activity.getWindow();
+        if (window == null) return;
+        WindowCompat.setDecorFitsSystemWindows(window, false);
         final View content = activity.findViewById(android.R.id.content);
         if (content == null) return;
         ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars()
                     | WindowInsetsCompat.Type.displayCutout()
                     | WindowInsetsCompat.Type.ime());
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-            return WindowInsetsCompat.CONSUMED;
+
+            // 1. Toolbar: extend background behind status bar, but pad contents below status bar
+            View toolbar = activity.findViewById(R.id.toolbar_layout);
+            if (toolbar != null) {
+                int defaultVerticalPx = (int) convertDpToPixel(16, activity);
+                toolbar.setPadding(toolbar.getPaddingLeft(), bars.top + defaultVerticalPx, toolbar.getPaddingRight(), defaultVerticalPx);
+            }
+
+            // 2. Drawer: start below status bar when at top, but slide underneath when scrolling
+            View drawerContent = activity.findViewById(R.id.dc);
+            if (drawerContent != null) {
+                int defaultTopPx = (int) convertDpToPixel(20, activity);
+                drawerContent.setPadding(drawerContent.getPaddingLeft(), bars.top + defaultTopPx, drawerContent.getPaddingRight(), drawerContent.getPaddingBottom());
+            }
+
+            // 3. Edge to Edge to the Stryker app content
+            View flContent = activity.findViewById(R.id.flContent);
+            if (flContent != null) {
+                flContent.setPadding(0, 0, 0, 0);
+            }
+
+            return insets;
         });
         ViewCompat.requestApplyInsets(content);
     }

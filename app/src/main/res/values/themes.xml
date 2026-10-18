@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.Stryker" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/stryker_accent</item>
         <item name="colorPrimaryDark">?attr/colorSurface</item>
@@ -7,8 +7,10 @@
         <item name="colorSecondary">@color/stryker_accent</item>
         <item name="colorSecondaryVariant">@color/stryker_accent_contrast</item>
         <item name="colorOnSecondary">@color/stryker_accent_contrast</item>
-        <item name="android:navigationBarColor">@color/toolbar_color</item>
-        <item name="android:statusBarColor">@color/toolbar_color</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
         <item name="switchStyle">@style/Widget.Stryker.Switch</item>
         <item name="android:textViewStyle">@style/Widget.Stryker.TextView</item>
         <item name="android:buttonStyle">@style/Widget.Stryker.Button</item>
